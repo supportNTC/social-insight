@@ -6,10 +6,14 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * Fade + 12px rise on viewport entry (MASTER.md "Scroll Reveal", subtle tier).
  * Plain IntersectionObserver instead of GSAP/ScrollTrigger — one subtle
  * effect on a handful of sections doesn't justify the extra dependency.
- * Renders content at full opacity immediately when the visitor prefers
- * reduced motion, and never hides content from crawlers (starts visible,
- * only animates the transition).
+ *
+ * A backstop timeout forces `visible` regardless of the observer: browsers
+ * can throttle or altogether skip intersection callbacks for a backgrounded/
+ * occluded tab, and this is decorative motion — it must never be able to
+ * leave real data permanently stuck at opacity-0.
  */
+const REVEAL_FALLBACK_MS = 600;
+
 export function ScrollReveal({
   children,
   delayMs = 0,
@@ -32,18 +36,26 @@ export function ScrollReveal({
       return;
     }
 
+    const reveal = () => setVisible(true);
+    const fallback = setTimeout(reveal, REVEAL_FALLBACK_MS + delayMs);
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          setVisible(true);
+          reveal();
           observer.disconnect();
+          clearTimeout(fallback);
         }
       },
       { threshold: 0.15 },
     );
     observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallback);
+    };
+  }, [delayMs]);
 
   return (
     <div

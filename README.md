@@ -4,9 +4,10 @@ Internal dashboard สำหรับแผนก marketing รวมข้อ�
 Instagram Business และ TikTok เก็บประวัติลง Postgres ของเราเอง แล้วคำนวณว่า
 คอนเทนต์ไหนทำผลงานดีกว่าค่าปกติของบัญชีนั้น
 
-> **สถานะ: Stage 1 — รากฐาน**
-> โครงสร้างโปรเจกต์, Postgres, Prisma schema และ migration พร้อมแล้ว
-> sync engine / metrics / UI จะมาใน stage ถัดไป
+> **สถานะ: Stage 4 เสร็จแล้ว (รากฐาน → provider/sync → metrics → UI)**
+> `pnpm sync` ทำงานได้เต็มรูปแบบด้วย MockProvider, หน้า Overview/Content/Settings
+> ใช้งานได้จริงบนข้อมูลจริงในฐานข้อมูล ดูรายละเอียดที่ [`PROMPT_STAGE5.md`](PROMPT_STAGE5.md)
+> ก่อนเริ่ม Stage 5 — ระบบแนะนำ (ยังไม่เริ่ม)
 
 ---
 

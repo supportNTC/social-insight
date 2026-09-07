@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Area,
   AreaChart,
@@ -11,70 +10,27 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getTrend, PLATFORM_LABEL, type Platform } from "@/lib/mock/overview-prototype";
+import type { Platform } from "@prisma/client";
+import type { TrendPoint } from "@/lib/queries/overview";
+import { PLATFORM_LABEL, PLATFORM_MARK_COLOR } from "@/lib/platform";
 import { formatCompactNumber } from "@/lib/format";
 
-// Validated in design-system/social-insight-dashboard/MASTER.md — fixed CVD
-// pairing, do not substitute. Light-mode values (dark handled via CSS vars
-// on the chart wrapper, recharts needs literal hex per series).
-const SERIES: { key: Platform; color: string }[] = [
-  { key: "facebook", color: "#2a78d6" },
-  { key: "instagram", color: "#eb6834" },
-  { key: "tiktok", color: "#1baf7a" },
-];
-
-const RANGES = [
-  { key: "7d" as const, label: "7 วัน" },
-  { key: "30d" as const, label: "30 วัน" },
-];
-
-export function TrendSection() {
-  const [range, setRange] = useState<"7d" | "30d">("30d");
-  const data = getTrend(range);
-
+export function TrendSection({ trend, platforms }: { trend: TrendPoint[]; platforms: Platform[] }) {
   return (
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-[var(--space-2xl)] shadow-[var(--shadow-md)]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[16px] font-semibold text-[var(--ink)]">
-            ยอด engagement รายวัน
-          </h2>
-          <p className="mt-0.5 text-[13px] text-[var(--ink-2)]">
-            แยกตามแพลตฟอร์ม — ยอดสะสมของแต่ละวัน (ไม่ใช่ยอด delta)
-          </p>
-        </div>
-
-        <div
-          role="group"
-          aria-label="ช่วงเวลา"
-          className="flex gap-1 rounded-lg bg-[var(--color-muted)] p-1"
-        >
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              onClick={() => setRange(r.key)}
-              aria-pressed={range === r.key}
-              className={`cursor-pointer rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:outline-none ${
-                range === r.key
-                  ? "bg-[var(--color-card)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
-                  : "text-[var(--ink-2)] hover:text-[var(--ink)]"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <h2 className="text-[16px] font-semibold text-[var(--ink)]">Engagement ถ่วงน้ำหนักรายวัน</h2>
+      <p className="mt-0.5 text-[13px] text-[var(--ink-2)]">
+        แยกตามแพลตฟอร์ม — คำนวณจากยอด delta ของแต่ละวัน ไม่ใช่ยอดสะสม
+      </p>
 
       <div className="mt-[var(--space-xl)] h-[280px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+          <AreaChart data={trend} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
             <defs>
-              {SERIES.map((s) => (
-                <linearGradient key={s.key} id={`fill-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={s.color} stopOpacity={0.22} />
-                  <stop offset="100%" stopColor={s.color} stopOpacity={0} />
+              {platforms.map((platform) => (
+                <linearGradient key={platform} id={`fill-${platform}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={PLATFORM_MARK_COLOR[platform]} stopOpacity={0.22} />
+                  <stop offset="100%" stopColor={PLATFORM_MARK_COLOR[platform]} stopOpacity={0} />
                 </linearGradient>
               ))}
             </defs>
@@ -113,15 +69,16 @@ export function TrendSection() {
               iconType="circle"
               iconSize={8}
             />
-            {SERIES.map((s) => (
+            {platforms.map((platform) => (
               <Area
-                key={s.key}
+                key={platform}
                 type="monotone"
-                dataKey={s.key}
-                name={s.key}
-                stroke={s.color}
+                dataKey={platform}
+                name={platform}
+                stroke={PLATFORM_MARK_COLOR[platform]}
                 strokeWidth={2}
-                fill={`url(#fill-${s.key})`}
+                fill={`url(#fill-${platform})`}
+                connectNulls
                 animationDuration={300}
               />
             ))}

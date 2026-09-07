@@ -100,3 +100,21 @@ function assertSnapshotDate(value: string): void {
     throw new RangeError(`Expected a YYYY-MM-DD snapshot date, got "${value}"`);
   }
 }
+
+/**
+ * The instant a Bangkok business day ends — i.e. the next day's local
+ * midnight. Needed wherever a *day label* has to be compared against a
+ * timestamp (content age in hours, for instance).
+ *
+ * Asia/Bangkok is a fixed +07:00 offset with no DST, so the offset is written
+ * literally rather than derived; the constant is asserted in the tests.
+ */
+export function endOfSnapshotDay(date: SnapshotDate): Date {
+  assertSnapshotDate(date);
+  const next = addDays(date, 1);
+  const instant = new Date(`${next}T00:00:00.000+07:00`);
+  if (Number.isNaN(instant.getTime())) {
+    throw new RangeError(`Not a real calendar date: ${date}`);
+  }
+  return instant;
+}

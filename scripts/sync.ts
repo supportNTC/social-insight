@@ -1,27 +1,40 @@
+import { getProvider } from "@/lib/providers/factory";
+import { runSync } from "@/lib/sync/run-sync";
+import { prisma } from "@/lib/db";
+
 /**
- * CLI entrypoint for `pnpm sync` / `pnpm sync -- --dry`.
- *
- * Stage 1 only wires up argument parsing and the exit contract so the command
- * exists and typechecks. The engine itself lands in Stage 2
- * (lib/sync/engine.ts).
+ * `pnpm sync` / `pnpm sync -- --dry`. Mirrors exactly what POST /api/sync
+ * does (same runSync + provider), so a cron hitting the API route and a
+ * developer running this by hand exercise identical logic.
  */
-
-interface SyncArgs {
-  /** Fetch from the provider and log, but write nothing to the database. */
-  dry: boolean;
-}
-
-function parseArgs(argv: readonly string[]): SyncArgs {
-  return { dry: argv.includes("--dry") };
-}
-
 async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
+  const dryRun = process.argv.includes("--dry");
+  const provider = getProvider();
 
-  console.error(
-    `[sync] not implemented yet (dry=${args.dry}). The sync engine arrives in Stage 2.`,
-  );
-  process.exitCode = 1;
+  console.log(`[sync] provider=${provider.kind} dryRun=${dryRun}`);
+
+  const result = await runSync(provider, { dryRun });
+
+  for (const account of result.accounts) {
+    const label = `${account.platform}/${account.externalId}`;
+    if (account.status === "success") {
+      console.log(`[sync] ${label}: ok, ${account.itemsSynced} items`);
+    } else {
+      console.error(`[sync] ${label}: FAILED — ${account.errorMessage}`);
+    }
+  }
+
+  const failed = result.accounts.filter((a) => a.status === "failed");
+  if (failed.length > 0) {
+    process.exitCode = 1;
+  }
 }
 
-void main();
+main()
+  .catch((error: unknown) => {
+    console.error("[sync] fatal:", error);
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    void prisma.$disconnect();
+  });

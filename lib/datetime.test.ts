@@ -3,6 +3,7 @@ import {
   addDays,
   daysBetween,
   eachDay,
+  endOfSnapshotDay,
   snapshotDateFor,
   snapshotDateFromColumn,
   snapshotDateToColumn,
@@ -77,5 +78,27 @@ describe("addDays / daysBetween / eachDay", () => {
 
   it("returns nothing for a reversed range", () => {
     expect(eachDay("2026-09-07", "2026-09-05")).toEqual([]);
+  });
+});
+
+describe("endOfSnapshotDay", () => {
+  it("returns the instant the Bangkok day rolls over", () => {
+    // The Bangkok day 2026-09-07 ends at 2026-09-07T17:00:00Z (= the 8th's
+    // local midnight), not at UTC midnight.
+    expect(endOfSnapshotDay("2026-09-07").toISOString()).toBe("2026-09-07T17:00:00.000Z");
+  });
+
+  it("is the first instant that already belongs to the next day", () => {
+    const end = endOfSnapshotDay("2026-09-07");
+    expect(snapshotDateFor(new Date(end.getTime() - 1))).toBe("2026-09-07");
+    expect(snapshotDateFor(end)).toBe("2026-09-08");
+  });
+
+  it("crosses a year boundary", () => {
+    expect(endOfSnapshotDay("2026-12-31").toISOString()).toBe("2026-12-31T17:00:00.000Z");
+  });
+
+  it("rejects a malformed day label", () => {
+    expect(() => endOfSnapshotDay("7 Sep 2026")).toThrow(RangeError);
   });
 });

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Thai, IBM_Plex_Mono } from "next/font/google";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { getLatestSyncFinishedAt } from "@/lib/queries/sync-status";
 import "./globals.css";
 
 // Project override in design-system/social-insight-dashboard/MASTER.md:
@@ -26,12 +28,17 @@ export const metadata: Metadata = {
     "ข้อมูล insight จาก Facebook Page, Instagram Business และ TikTok รวมในที่เดียว",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const lastSyncFinishedAt = await getLatestSyncFinishedAt();
+
   return (
     <html lang="th" className={`${ibmPlexSansThai.variable} ${ibmPlexMono.variable}`}>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <AppHeader lastSyncFinishedAt={lastSyncFinishedAt} />
+        {children}
+      </body>
     </html>
   );
 }

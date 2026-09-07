@@ -8,12 +8,15 @@ export function KpiCard({
   label,
   value,
   deltaLabel,
+  compareLabel = "เทียบช่วงก่อนหน้า",
   trend,
   icon: Icon,
 }: {
   label: string;
   value: string;
   deltaLabel: string;
+  /** e.g. "เทียบช่วงก่อนหน้า" for a period-over-period %, or "เพิ่มขึ้นในช่วงนี้" for an absolute growth count. */
+  compareLabel?: string;
   trend: Trend;
   icon: ComponentType<IconProps>;
 }) {
@@ -45,7 +48,7 @@ export function KpiCard({
         {trend === "up" && <CaretUp size={13} weight="bold" aria-hidden="true" />}
         {trend === "down" && <CaretDown size={13} weight="bold" aria-hidden="true" />}
         <span className="font-mono tabular-nums">{deltaLabel}</span>
-        <span className="text-[var(--ink-3)]">เทียบช่วงก่อนหน้า</span>
+        <span className="text-[var(--ink-3)]">{compareLabel}</span>
       </div>
     </div>
   );
