@@ -1,4 +1,5 @@
 {
   "name": "social-insight",
-  "script": "dev"
+  "script": "dev",
+  "appPort": 3400
 }

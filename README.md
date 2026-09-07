@@ -4,10 +4,11 @@ Internal dashboard สำหรับแผนก marketing รวมข้อ�
 Instagram Business และ TikTok เก็บประวัติลง Postgres ของเราเอง แล้วคำนวณว่า
 คอนเทนต์ไหนทำผลงานดีกว่าค่าปกติของบัญชีนั้น
 
-> **สถานะ: Stage 4 เสร็จแล้ว (รากฐาน → provider/sync → metrics → UI)**
-> `pnpm sync` ทำงานได้เต็มรูปแบบด้วย MockProvider, หน้า Overview/Content/Settings
-> ใช้งานได้จริงบนข้อมูลจริงในฐานข้อมูล ดูรายละเอียดที่ [`PROMPT_STAGE5.md`](PROMPT_STAGE5.md)
-> ก่อนเริ่ม Stage 5 — ระบบแนะนำ (ยังไม่เริ่ม)
+> **สถานะ: Stage 1-5 เสร็จ, Stage 6 (Facebook provider) รอยืนยันรายละเอียดจาก docs**
+> `pnpm sync` ทำงานได้เต็มรูปแบบด้วย MockProvider, หน้า Overview (รวมระบบแนะนำ
+> "กำลังมา / Top 10 / ต่ำกว่าปกติ") / Content / Settings ใช้งานได้จริงบนข้อมูลใน
+> ฐานข้อมูล ส่วน FacebookProvider เขียนไว้ครบแล้วแต่ยังเปิดใช้ไม่ได้ — ดู
+> [Provider](#provider) ด้านล่าง
 
 ---
 
@@ -121,7 +122,30 @@ INSIGHT_PROVIDER=mock    # ค่า default — อย่าเปลี่ย�
 MOCK_SEED=20260907       # seed คงที่ ทำให้ sync ซ้ำได้ผลเดิม (idempotent)
 ```
 
-Provider จริงอยู่หลัง env flag นี้ และจะทำทีละแพลตฟอร์มเริ่มจาก Facebook ใน Stage 6
+### FacebookProvider (Stage 6)
+
+```
+INSIGHT_PROVIDER=facebook
+FACEBOOK_PAGE_ID=...            # Page id
+FACEBOOK_PAGE_ACCESS_TOKEN=...  # Page access token — ส่งเป็น Authorization header เท่านั้น
+FACEBOOK_GRAPH_VERSION=         # ว่าง = v25.0 ตามที่ยืนยันไว้ใน api-spec.ts
+FACEBOOK_LOOKBACK_DAYS=90
+```
+
+ทุก endpoint / field / metric ที่ยิงออกไปอยู่ใน
+[`lib/providers/facebook/api-spec.ts`](lib/providers/facebook/api-spec.ts) ไฟล์เดียว
+พร้อมลิงก์ docs และวันที่ยืนยันของแต่ละตัว **ห้ามเพิ่มชื่อ metric จากความจำ** —
+Meta ลบ metric ตามกำหนดการจริง เช่น `post_impressions_unique` (reach ของโพสต์ที่คู่มือ
+ส่วนใหญ่ยังสอนอยู่) ถูกลบไปแล้ว 15 มิ.ย. 2025 ต้องใช้ `post_total_media_view_unique` แทน
+และ `page_fans` ถูกลบ 15 พ.ย. 2025 ใช้ `page_follows` แทน — เรียก metric ที่ถูกลบแล้ว
+จะได้ error "invalid metric" ไม่ใช่ข้อมูลเปล่า
+
+รายละเอียดที่ยัง **ยืนยันจาก docs ไม่ได้** ถูกรวมไว้ที่ `UNVERIFIED` ในไฟล์เดียวกัน
+โค้ดจะโยน `UnverifiedApiDetailError` พร้อมลิงก์หน้า docs ที่ต้องไปเช็ค แทนที่จะเดาค่า
+ให้ตัวเลขผิดหลุดเข้า DB — ตราบใดที่ยังมีข้อค้างอยู่ sync ด้วย provider นี้จะยังไม่ผ่าน
+(ตั้งใจ) ส่วน MockProvider ยังทำงานได้ปกติทุกอย่าง
+
+Instagram และ TikTok ยังไม่ทำ รอทำทีละตัวหลัง Facebook ผ่านการทดสอบจริง
 
 ## โครงสร้าง
 
@@ -133,6 +157,8 @@ lib/
   db.ts                 prisma client (singleton, hot-reload safe)
   env.ts                zod-validated environment
   providers/            InsightProvider interface + implementations   (Stage 2)
+    facebook/           api-spec (endpoint/metric ที่ยืนยันแล้ว), graph client,
+                        normalize + tests                             (Stage 6)
   metrics/              การคำนวณทั้งหมด + unit tests                    (Stage 3)
   sync/                 sync engine, upsert, sync_runs logging        (Stage 2)
   queries/              read layer สำหรับ UI                           (Stage 4)

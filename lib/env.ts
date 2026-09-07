@@ -29,6 +29,18 @@ const schema = z.object({
   TOKEN_ENCRYPTION_KEY: z.string().default(""),
   FACEBOOK_APP_ID: z.string().default(""),
   FACEBOOK_APP_SECRET: z.string().default(""),
+
+  // ---- Facebook provider (Stage 6) ------------------------------------------
+  // Only read when INSIGHT_PROVIDER=facebook; the factory fails with a clear
+  // message if any of them is still empty. The token is a secret: it is read
+  // from here and sent as an Authorization header, never written to the
+  // database and never put in a query string (CLAUDE.md rule 5).
+  FACEBOOK_PAGE_ID: z.string().default(""),
+  FACEBOOK_PAGE_ACCESS_TOKEN: z.string().default(""),
+  /** Pin a Graph API version. Empty = the version verified in api-spec.ts. */
+  FACEBOOK_GRAPH_VERSION: z.string().default(""),
+  /** How many days of posts each sync walks back over. */
+  FACEBOOK_LOOKBACK_DAYS: z.coerce.number().int().gt(0).lte(365).default(90),
 });
 
 /**
