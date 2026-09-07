@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/*
+ * Tokens from design-system/social-insight-dashboard/MASTER.md (Data-Dense
+ * Dashboard, generated 2026-09-07). Fonts are the project override in that
+ * file's "Project overrides" section (IBM Plex Sans Thai/Mono, not Fira —
+ * Fira Sans has no Thai glyph coverage) and are loaded via next/font/google
+ * in app/layout.tsx, which sets --font-sans-thai / --font-mono below.
+ *
+ * Chart-mark colors (facebook/instagram/tiktok) and dark-mode ink values are
+ * copied verbatim from MASTER.md — they're validated for CVD contrast as a
+ * set, do not substitute. MASTER.md gave only light-mode surface colors
+ * (Background/Card/Border/etc.); the dark equivalents below are a judgment
+ * call, not a spec value — flagged for review.
+ */
+:root {
+  --background: #f8fafc;
+  --foreground: #1e3a8a;
+  --card: #ffffff;
+  --card-foreground: #1e3a8a;
+  --popover: #ffffff;
+  --popover-foreground: #1e3a8a;
+  --primary: #1e40af;
+  --primary-foreground: #ffffff;
+  --secondary: #3b82f6;
+  --secondary-foreground: #000000;
+  --muted: #e9eef6;
+  --muted-foreground: #475569;
+  --accent: #d97706;
+  --accent-foreground: #000000;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #dbeafe;
+  --input: #dbeafe;
+  --ring: #1e40af;
+  --radius: 0.75rem;
+
+  /* Mark (3:1) vs text (4.5:1) — never use a mark token as a text color. */
+  --accent-ink: #2771c9;
+  --good: #16a34a;
+  --good-ink: #0a840a;
+  --warning: #f59e0b;
+  --warning-ink: #93690f;
+  --critical: #dc2626;
+  --critical-ink: #d03b3b;
+  --ink: #0e1116;
+  --ink-2: #59616f;
+  --ink-3: #686e79;
+
+  --space-xs: 2px;
+  --space-sm: 4px;
+  --space-md: 8px;
+  --space-lg: 12px;
+  --space-xl: 16px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
+.dark {
+  --background: #0b1220;
+  --foreground: #e8ebf0;
+  --card: #111a2e;
+  --card-foreground: #e8ebf0;
+  --popover: #111a2e;
+  --popover-foreground: #e8ebf0;
+  --primary: #3987e5;
+  --primary-foreground: #0b1220;
+  --secondary: #60a5fa;
+  --secondary-foreground: #0b1220;
+  --muted: #182541;
+  --muted-foreground: #9aa3b2;
+  --accent: #fab219;
+  --accent-foreground: #0b1220;
+  --destructive: #e66767;
+  --destructive-foreground: #0b1220;
+  --border: #1f2b46;
+  --input: #1f2b46;
+  --ring: #3987e5;
+
+  --accent-ink: #3987e5;
+  --good: #199e70;
+  --good-ink: #0ca30c;
+  --warning: #fab219;
+  --warning-ink: #fab219;
+  --critical: #e66767;
+  --critical-ink: #e66767;
+  --ink: #e8ebf0;
+  --ink-2: #9aa3b2;
+  --ink-3: #7f8695;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-sans-thai);
+  --font-mono: var(--font-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans-thai), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}

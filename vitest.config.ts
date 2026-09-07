@@ -1,0 +1,16 @@
+import { defineConfig } from "vitest/config";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig({
+  plugins: [tsconfigPaths()],
+  test: {
+    environment: "node",
+    include: ["lib/**/*.test.ts", "scripts/**/*.test.ts", "test/**/*.test.ts"],
+    // All timestamp math is UTC-in / Asia/Bangkok-out. Pin the process TZ so a
+    // developer machine in another timezone cannot make the suite pass or fail
+    // for the wrong reason.
+    env: {
+      TZ: "UTC",
+    },
+  },
+});

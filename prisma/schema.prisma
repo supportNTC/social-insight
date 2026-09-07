@@ -1,0 +1,258 @@
+// Social Insight Dashboard — data model
+//
+// Two rules govern this whole schema:
+//
+//  1. CUMULATIVE SNAPSHOTS. `content_metrics_daily` stores the *lifetime total*
+//     of a piece of content as of that date — NOT what happened on that date.
+//     A row (content=X, date=2026-09-07, views=1200) means "X had 1200 views in
+//     total by the end of 2026-09-07". The views that actually happened on that
+//     day are `views(2026-09-07) - views(2026-09-06)` (a "delta"). We store it
+//     this way because that is what the platform APIs hand us, and because a
+//     cumulative series lets us recompute any delta window afterwards, while a
+//     per-day series cannot be rebuilt if a sync is missed.
+//     `account_metrics_daily` is the exception — see the comment on that model.
+//
+//  2. NOTHING WE COMPUTE IS STORED. Engagement rate, performance score and
+//     velocity are derived at query time in lib/metrics/ so that changing
+//     `metric_weights` retroactively corrects history. Only raw counters
+//     reported by a provider live in these tables.
+//
+// Timezone: every timestamp column is `timestamptz` and holds UTC.
+// `snapshot_date` is a plain `date` in Asia/Bangkok (see lib/datetime.ts) —
+// it is a business day label, not an instant.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// The social network a piece of content lives on.
+enum Platform {
+  facebook
+  instagram
+  tiktok
+}
+
+/// Which implementation of InsightProvider produced a payload. Distinct from
+/// `Platform` because `mock` is a first-class provider that has no platform.
+enum ProviderKind {
+  mock
+  facebook
+  instagram
+  tiktok
+}
+
+enum ContentKind {
+  video
+  image
+  reel
+  carousel
+}
+
+enum SyncStatus {
+  /// Row is written when the run starts; a crashed process leaves it here.
+  running
+  success
+  /// Finished, but at least one account or endpoint failed.
+  partial
+  failed
+}
+
+/// A page / business account we pull insights for.
+model Account {
+  id         String   @id @default(cuid())
+  platform   Platform
+  /// The account id as the platform knows it (page id, ig user id, ...).
+  externalId String   @map("external_id")
+  name       String
+  /// IANA zone the account's own "day" is reported in. Display and
+  /// snapshot_date still use Asia/Bangkok; this is kept for provider calls
+  /// that need the account's native day boundary.
+  timezone   String   @default("Asia/Bangkok")
+  isActive   Boolean  @default(true) @map("is_active")
+
+  /// Pointer to the encrypted access token (never the token itself).
+  /// Null while running on MockProvider.
+  tokenRef       String?   @map("token_ref")
+  tokenExpiresAt DateTime? @map("token_expires_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  contents     Content[]
+  metricsDaily AccountMetricDaily[]
+  rawPayloads  RawPayload[]
+  syncRuns     SyncRun[]
+
+  @@unique([platform, externalId])
+  @@index([isActive])
+  @@map("accounts")
+}
+
+/// One post / clip on any platform.
+model Content {
+  id         String      @id @default(cuid())
+  accountId  String      @map("account_id")
+  platform   Platform
+  externalId String      @map("external_id")
+  kind       ContentKind
+
+  /// Nullable: a clip may genuinely have no caption, and some endpoints omit
+  /// permalink / thumbnail. Never substitute an empty string for "unknown".
+  caption      String?
+  permalink    String?
+  thumbnailUrl String?  @map("thumbnail_url")
+
+  publishedAt DateTime @map("published_at") @db.Timestamptz(3)
+
+  /// Null for non-video content, and for platforms that do not report it.
+  durationSeconds Int? @map("duration_seconds")
+
+  tags String[] @default([])
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Restrict, not Cascade: metrics history cannot be re-fetched (TikTok only
+  // exposes ~60 days), so deleting an account must never silently delete it.
+  account      Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  metricsDaily ContentMetricDaily[]
+
+  @@unique([platform, externalId])
+  @@index([accountId, publishedAt])
+  @@index([publishedAt])
+  @@map("contents")
+}
+
+/// CUMULATIVE lifetime totals for one content as of one Asia/Bangkok day.
+/// See rule 1 at the top of this file. Do not read these numbers as
+/// "activity on this day" — subtract the previous snapshot for that.
+model ContentMetricDaily {
+  id           String   @id @default(cuid())
+  contentId    String   @map("content_id")
+  /// Business day in Asia/Bangkok. Stored as `date`, no time component.
+  snapshotDate DateTime @map("snapshot_date") @db.Date
+
+  views    Int
+  /// Null on platforms that do not expose reach. NEVER default this to 0 —
+  /// 0 reach and "reach unavailable" mean opposite things, and the engagement
+  /// rate basis (reach vs views) depends on telling them apart.
+  reach    Int?
+  likes    Int
+  comments Int
+  shares   Int
+  /// Null where the platform has no save/bookmark concept.
+  saves    Int?
+
+  /// Video-only, null elsewhere.
+  avgWatchSeconds Float? @map("avg_watch_seconds")
+  /// 0..1, video-only, null elsewhere.
+  completionRate  Float? @map("completion_rate")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Restrict)
+
+  /// Makes re-running a sync for the same day an update, not a duplicate.
+  @@unique([contentId, snapshotDate])
+  @@index([snapshotDate])
+  @@map("content_metrics_daily")
+}
+
+/// Account-level daily numbers.
+///
+/// NOTE — this table does NOT follow the cumulative rule, on purpose:
+///   * `followers`      point-in-time value at the end of that day
+///   * `followerDelta`  change vs the previous day (null on the first snapshot)
+///   * `views` / `reach` activity that happened ON that day (per-day), because
+///                      that is the shape every platform reports account
+///                      insights in. Do not subtract consecutive rows here.
+model AccountMetricDaily {
+  id           String   @id @default(cuid())
+  accountId    String   @map("account_id")
+  snapshotDate DateTime @map("snapshot_date") @db.Date
+
+  followers     Int
+  followerDelta Int? @map("follower_delta")
+  /// Nullable: not every platform reports account-level views / reach.
+  views         Int?
+  reach         Int?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, snapshotDate])
+  @@index([snapshotDate])
+  @@map("account_metrics_daily")
+}
+
+/// Weights used to build a weighted engagement count. Singleton: exactly one
+/// row, id = 1, enforced by a CHECK constraint in the migration.
+/// Editing this changes every historical number, which is intended — see
+/// rule 2 at the top of this file.
+model MetricWeights {
+  id Int @id @default(1)
+
+  likeWeight    Float @default(1) @map("like_weight")
+  commentWeight Float @default(3) @map("comment_weight")
+  shareWeight   Float @default(5) @map("share_weight")
+  saveWeight    Float @default(4) @map("save_weight")
+
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// Free text until the company SSO decision is made — there is no auth yet.
+  updatedBy String   @default("system") @map("updated_by")
+
+  @@map("metric_weights")
+}
+
+/// Verbatim provider response, written BEFORE normalisation. If a formula or a
+/// mapping changes we replay these instead of calling the API again — which
+/// matters because TikTok only serves ~60 days of history.
+model RawPayload {
+  id        String       @id @default(cuid())
+  accountId String       @map("account_id")
+  provider  ProviderKind
+  /// Logical endpoint name, e.g. "content.list" or "content.metrics".
+  endpoint  String
+  fetchedAt DateTime     @default(now()) @map("fetched_at") @db.Timestamptz(3)
+  payload   Json         @db.JsonB
+
+  /// Which sync run produced this. Not in the original spec — added so a
+  /// recompute can replay exactly one run.
+  syncRunId String? @map("sync_run_id")
+
+  account Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  syncRun SyncRun? @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, fetchedAt])
+  @@index([provider, endpoint, fetchedAt])
+  @@map("raw_payloads")
+}
+
+/// One execution of the sync engine against one account.
+model SyncRun {
+  id        String       @id @default(cuid())
+  accountId String       @map("account_id")
+  provider  ProviderKind
+  startedAt DateTime     @default(now()) @map("started_at") @db.Timestamptz(3)
+  /// Null while the run is in flight, and forever if the process died.
+  finishedAt DateTime?   @map("finished_at") @db.Timestamptz(3)
+  status     SyncStatus  @default(running)
+  itemsSynced Int        @default(0) @map("items_synced")
+  /// English, for logs. User-facing Thai copy is built in the UI layer.
+  errorMessage String?   @map("error_message")
+
+  account     Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  rawPayloads RawPayload[]
+
+  @@index([accountId, startedAt])
+  @@index([status, startedAt])
+  @@map("sync_runs")
+}
