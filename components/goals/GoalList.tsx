@@ -6,6 +6,12 @@ import { PLATFORM_LABEL, PLATFORM_MARK_COLOR } from "@/lib/platform";
 import { formatCompactNumber, formatPercent, formatSignedCompactNumber } from "@/lib/format";
 import { EmptyState } from "@/components/shared/EmptyState";
 
+/**
+ * Bare list renderer, no card/header of its own — reused as-is inside
+ * Overview's own "เป้าหมายเดือนนี้" card (app/page.tsx) and inside
+ * GoalProgressCard's header+card on /goals (components/goals/GoalProgressCard.tsx).
+ * Each caller supplies its own surrounding chrome.
+ */
 export function GoalList({ goals }: { goals: GoalWithProgress[] }) {
   if (goals.length === 0) {
     return (

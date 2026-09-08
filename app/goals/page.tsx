@@ -1,8 +1,10 @@
 import { GoalForm } from "@/components/goals/GoalForm";
-import { GoalList } from "@/components/goals/GoalList";
+import { GoalProgressCard } from "@/components/goals/GoalProgressCard";
+import { GoalSummary } from "@/components/goals/GoalSummary";
 import { MonthPicker } from "@/components/goals/MonthPicker";
 import { CourseConversionForm } from "@/components/goals/CourseConversionForm";
 import { CourseConversionList } from "@/components/goals/CourseConversionList";
+import { ScrollReveal } from "@/components/overview/ScrollReveal";
 import { getLatestDataDate } from "@/lib/queries/latest-data-date";
 import {
   currentMonthKey,
@@ -32,6 +34,7 @@ export default async function GoalsPage({
   const month: MonthKey = isMonthKey(params.month) ? params.month : anchorMonth;
 
   const [goals, entries] = await Promise.all([getGoalsForMonth(month), getCourseConversionEntries(month)]);
+  const courseTotal = entries.reduce((sum, entry) => sum + entry.count, 0);
 
   // Default the date field to today when logging for the current month, or
   // to the 1st when logging for a past/future month — either way it lands
@@ -50,11 +53,30 @@ export default async function GoalsPage({
         <MonthPicker month={month} anchorMonth={anchorMonth} />
       </header>
 
-      <div className="flex flex-col gap-[var(--space-2xl)]">
-        <GoalList goals={goals} />
-        <GoalForm month={month} />
-        <CourseConversionForm defaultDate={defaultEntryDate} />
-        <CourseConversionList entries={entries} />
+      <ScrollReveal>
+        <GoalSummary goals={goals} courseTotal={courseTotal} />
+      </ScrollReveal>
+
+      <div className="mt-[var(--space-2xl)] grid grid-cols-1 gap-[var(--space-2xl)] lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ScrollReveal delayMs={60}>
+            <GoalProgressCard goals={goals} />
+          </ScrollReveal>
+        </div>
+        <ScrollReveal delayMs={120}>
+          <GoalForm month={month} />
+        </ScrollReveal>
+      </div>
+
+      <div className="mt-[var(--space-2xl)] grid grid-cols-1 gap-[var(--space-2xl)] lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ScrollReveal delayMs={60}>
+            <CourseConversionList entries={entries} />
+          </ScrollReveal>
+        </div>
+        <ScrollReveal delayMs={120}>
+          <CourseConversionForm defaultDate={defaultEntryDate} />
+        </ScrollReveal>
       </div>
     </main>
   );

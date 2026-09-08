@@ -1,4 +1,4 @@
-import { Trash } from "@phosphor-icons/react/dist/ssr";
+import { GraduationCap, Trash } from "@phosphor-icons/react/dist/ssr";
 import { deleteCourseConversionAction } from "@/app/goals/actions";
 import type { CourseConversionEntryView } from "@/lib/queries/goals";
 import { PLATFORM_LABEL, PLATFORM_MARK_COLOR } from "@/lib/platform";
@@ -9,9 +9,12 @@ export function CourseConversionList({ entries }: { entries: CourseConversionEnt
   const total = entries.reduce((sum, e) => sum + e.count, 0);
 
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-[var(--space-2xl)] shadow-[var(--shadow-md)]">
-      <div className="flex items-center justify-between">
-        <h2 className="text-[16px] font-semibold text-[var(--ink)]">รายการที่บันทึกไว้เดือนนี้</h2>
+    <div className="flex h-full flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-[var(--space-2xl)] shadow-[var(--shadow-md)]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <GraduationCap size={18} weight="fill" className="text-[var(--accent-ink)]" aria-hidden="true" />
+          <h2 className="text-[16px] font-semibold text-[var(--ink)]">รายการที่บันทึกไว้เดือนนี้</h2>
+        </div>
         <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--ink)]">
           รวม {formatNumber(total)} คน
         </span>
