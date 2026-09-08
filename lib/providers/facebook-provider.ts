@@ -8,7 +8,7 @@ import {
   PUBLISHED_POSTS_EDGE,
   PUBLISHED_POSTS_MAX_LIMIT,
 } from "./facebook/api-spec";
-import { GraphClient, type GraphClientOptions } from "./facebook/graph-client";
+import { GraphClient, type GraphClientOptions } from "./meta/graph-client";
 import {
   normalizeAccountMetrics,
   normalizeContentMetric,

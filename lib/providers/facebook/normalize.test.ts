@@ -129,9 +129,20 @@ describe("readCommentCount / readShareCount", () => {
     expect(readShareCount(postFixture())).toBe(4);
   });
 
-  it("raises instead of assuming 0 when the field expansion is absent", () => {
-    expect(() => readCommentCount(postFixture({ comments: undefined }))).toThrow(UnverifiedApiDetailError);
-    expect(() => readShareCount(postFixture({ shares: undefined }))).toThrow(UnverifiedApiDetailError);
+  it("raises when a confirmed comment count is unexpectedly absent", () => {
+    // total_count is a confirmed field (Post Comments reference) — an absent
+    // response is treated as an API/permissions problem, not an open question.
+    expect(() => readCommentCount(postFixture({ comments: undefined }))).toThrow(/permissions/);
+  });
+
+  it("treats a missing shares field as 0 shares (team decision, not doc-confirmed)", () => {
+    expect(readShareCount(postFixture({ shares: undefined }))).toBe(0);
+    expect(readShareCount(postFixture({ shares: null }))).toBe(0);
+  });
+
+  it("still raises when shares is present but malformed — that is a genuine shape surprise", () => {
+    expect(() => readShareCount(postFixture({ shares: {} }))).toThrow(UnverifiedApiDetailError);
+    expect(() => readShareCount(postFixture({ shares: { count: "many" } }))).toThrow(UnverifiedApiDetailError);
   });
 });
 

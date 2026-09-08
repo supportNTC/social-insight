@@ -194,10 +194,15 @@ export async function getContentList(filters: ContentListFilters): Promise<Conte
 
   const sorted = sortContentRows(rows, filters.sort);
   const total = sorted.length;
-  const start = (filters.page - 1) * filters.pageSize;
+  // Clamp rather than trust the querystring's page number — an out-of-range
+  // page (a stale bookmark, or someone editing the URL) must still land on a
+  // real page of results, not an empty slice with a nonsensical "19961-120".
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
+  const currentPage = Math.min(Math.max(1, filters.page), totalPages);
+  const start = (currentPage - 1) * filters.pageSize;
   const page = sorted.slice(start, start + filters.pageSize);
 
-  return { anchor, rows: page, total, page: filters.page, pageSize: filters.pageSize };
+  return { anchor, rows: page, total, page: currentPage, pageSize: filters.pageSize };
 }
 
 /** Same filters as getContentList, minus pagination — for CSV export. */

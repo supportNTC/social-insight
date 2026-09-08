@@ -1,4 +1,4 @@
-import { GRAPH_API_BASE_URL, GRAPH_API_VERSION } from "./api-spec";
+import { GRAPH_API_BASE_URL, GRAPH_API_VERSION } from "./constants";
 
 /**
  * A very small Graph API client: build a versioned URL, send the token as a

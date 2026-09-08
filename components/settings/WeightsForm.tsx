@@ -1,5 +1,10 @@
+"use client";
+
+import { useActionState, useEffect, useRef } from "react";
 import { updateWeightsAction } from "@/app/settings/actions";
 import type { MetricWeights } from "@/lib/metrics";
+import { FORM_ACTION_OK } from "@/lib/form-action-state";
+import { FormErrorBanner } from "@/components/shared/FormErrorBanner";
 
 const FIELDS: { name: keyof MetricWeights; label: string }[] = [
   { name: "likeWeight", label: "Like" },
@@ -9,15 +14,28 @@ const FIELDS: { name: keyof MetricWeights; label: string }[] = [
 ];
 
 export function WeightsForm({ weights }: { weights: MetricWeights }) {
+  const [state, formAction] = useActionState(updateWeightsAction, FORM_ACTION_OK);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (state.error) errorRef.current?.focus();
+  }, [state.error]);
+
   return (
     <form
-      action={updateWeightsAction}
+      action={formAction}
       className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-[var(--space-2xl)] shadow-[var(--shadow-md)]"
     >
       <h2 className="text-[16px] font-semibold text-[var(--ink)]">น้ำหนัก Metric</h2>
       <p className="mt-0.5 text-[13px] text-[var(--ink-2)]">
         ใช้คำนวณ weighted engagement และ engagement rate ทั่วทั้งระบบ
       </p>
+
+      {state.error && (
+        <div className="mt-[var(--space-lg)]">
+          <FormErrorBanner ref={errorRef} message={state.error} />
+        </div>
+      )}
 
       <div className="mt-[var(--space-xl)] grid grid-cols-2 gap-[var(--space-lg)] sm:grid-cols-4">
         {FIELDS.map((field) => (

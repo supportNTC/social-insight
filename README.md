@@ -4,11 +4,11 @@ Internal dashboard สำหรับแผนก marketing รวมข้อ�
 Instagram Business และ TikTok เก็บประวัติลง Postgres ของเราเอง แล้วคำนวณว่า
 คอนเทนต์ไหนทำผลงานดีกว่าค่าปกติของบัญชีนั้น
 
-> **สถานะ: Stage 1-5 เสร็จ, Stage 6 (Facebook provider) รอยืนยันรายละเอียดจาก docs**
+> **สถานะ: Stage 1-5 เสร็จ, Stage 6 — Facebook/Instagram/TikTok provider เขียนครบแล้ว
+> แต่ยังไม่มีตัวไหนทดสอบกับบัญชีจริงเลย**
 > `pnpm sync` ทำงานได้เต็มรูปแบบด้วย MockProvider, หน้า Overview (รวมระบบแนะนำ
 > "กำลังมา / Top 10 / ต่ำกว่าปกติ") / Content / Settings ใช้งานได้จริงบนข้อมูลใน
-> ฐานข้อมูล ส่วน FacebookProvider เขียนไว้ครบแล้วแต่ยังเปิดใช้ไม่ได้ — ดู
-> [Provider](#provider) ด้านล่าง
+> ฐานข้อมูล — ดู [Provider](#provider) ด้านล่างก่อนลองเปิดใช้ provider จริงตัวไหน
 
 ---
 
@@ -142,10 +142,63 @@ Meta ลบ metric ตามกำหนดการจริง เช่น `p
 
 รายละเอียดที่ยัง **ยืนยันจาก docs ไม่ได้** ถูกรวมไว้ที่ `UNVERIFIED` ในไฟล์เดียวกัน
 โค้ดจะโยน `UnverifiedApiDetailError` พร้อมลิงก์หน้า docs ที่ต้องไปเช็ค แทนที่จะเดาค่า
-ให้ตัวเลขผิดหลุดเข้า DB — ตราบใดที่ยังมีข้อค้างอยู่ sync ด้วย provider นี้จะยังไม่ผ่าน
-(ตั้งใจ) ส่วน MockProvider ยังทำงานได้ปกติทุกอย่าง
+ให้ตัวเลขผิดหลุดเข้า DB ส่วน MockProvider ยังทำงานได้ปกติทุกอย่าง
 
-Instagram และ TikTok ยังไม่ทำ รอทำทีละตัวหลัง Facebook ผ่านการทดสอบจริง
+**อัปเดต 2026-09-07:** เช็ค `comments.summary.total_count` แล้วยืนยันได้จาก
+[Post Comments reference](https://developers.facebook.com/docs/graph-api/reference/post/comments/)
+— ไม่ใช่ของค้างอีกต่อไป ส่วน `shares` ที่หายไปทั้งฟิลด์ (ไม่ใช่ `{count: 0}`) ยืนยันจาก
+docs ไม่ได้ว่าหมายถึงอะไร ทีมตัดสินใจให้ **ถือว่า = 0 แชร์** (ดูคอมเมนต์ที่
+`readShareCount` ใน `normalize.ts`) — เป็นการตัดสินใจของทีม ไม่ใช่ข้อเท็จจริงที่ยืนยัน
+จาก Meta ยังมีของค้างอื่นเหลืออยู่ (attachment type ที่ไม่อยู่ในลิสต์เอกสาร เช่น reel,
+avg watch seconds, completion rate, ฯลฯ — ดู `UNVERIFIED` ทั้งหมดใน api-spec.ts) แต่
+อันเหล่านั้นไม่ block ทุก sync เหมือนสองอันแรก
+
+**หมายเหตุ:** ตาม `PROMPT.md` Stage 6 ควรทำทีละแพลตฟอร์มแล้วหยุดให้ทดสอบจริงก่อนทำตัว
+ถัดไป — Instagram และ TikTok ด้านล่างถูกเขียนขึ้นตามคำสั่งของผู้ใช้ให้ทำต่อโดยไม่รอ
+ทดสอบ Facebook ก่อน ไม่ใช่เพราะ Facebook ผ่านการทดสอบแล้ว **ยังไม่มี provider จริงตัว
+ไหนเลยที่ทดสอบกับบัญชีจริง**
+
+### InstagramProvider (Stage 6)
+
+```
+INSIGHT_PROVIDER=instagram
+INSTAGRAM_PAGE_ID=...            # Facebook Page ที่ต่อ Instagram Business Account ไว้
+INSTAGRAM_ACCESS_TOKEN=...       # Page access token เดียวกับที่ FacebookProvider ใช้ได้
+INSTAGRAM_GRAPH_VERSION=         # ว่าง = v25.0 (Graph API เดียวกับ Facebook)
+INSTAGRAM_LOOKBACK_DAYS=90
+```
+
+Instagram Business account อ่านผ่าน **Graph API ตัวเดียวกับ Facebook**
+(`graph.facebook.com`, version เดียวกัน) ยืนยันจริงจาก example request ใน
+Instagram get-started guide ไม่ใช่เดาตามความคล้ายคลึงกัน — โค้ดเลยใช้
+`GraphClient` ตัวเดียวกัน (ย้ายไปอยู่ `lib/providers/meta/`) รายละเอียดอยู่ใน
+[`lib/providers/instagram/api-spec.ts`](lib/providers/instagram/api-spec.ts)
+
+ข้อจำกัดสำคัญ: `followers_count` เป็น field ปัจจุบัน ณ ตอนนั้น ไม่ใช่ metric แบบ
+time-series ที่ backfill ย้อนหลังได้ — แต่ละ sync จะได้แค่แถว `account_metrics_daily`
+ของ "วันนี้" วันเดียว และ `follower_delta` เป็น `null` เสมอ (คำนวณ delta ต้องรู้ค่าเมื่อวาน
+ซึ่งอยู่ใน DB เท่านั้น ส่วน provider ไม่แตะ DB)
+
+### TikTokProvider (Stage 6)
+
+```
+INSIGHT_PROVIDER=tiktok
+TIKTOK_ACCESS_TOKEN=...   # "TikTok for Developers" OAuth token ของบัญชีเอง (ไม่ใช่ TikTok Business/Marketing API)
+TIKTOK_LOOKBACK_DAYS=90
+```
+
+**ข้อควรระวังก่อนใช้จริง:** งานวิจัย docs ของ TikTok (2026-09-07) ยืนยันได้ไม่แน่นเท่า
+Facebook/Instagram — เว็บ docs หลักเป็น JS-rendered อ่านตรงไม่ได้ และผลค้นหาหลายอันขัดแย้ง
+กันเองก่อนจะเจอหน้าที่ยืนยันได้ชัด รายละเอียดทั้งหมด (endpoint ไหนยืนยันแล้ว, อะไรยังไม่ยืนยัน,
+ทำไมเลือกใช้ TikTok for Developers แทน TikTok for Business) อยู่ใน
+[`lib/providers/tiktok/api-spec.ts`](lib/providers/tiktok/api-spec.ts) — ควรอ่านทั้งไฟล์ก่อน
+ตั้งค่าจริง โดยเฉพาะ:
+- ไม่มี metric ไหนที่ยืนยันได้สำหรับ reach/saves/avg watch time/completion rate เลย —
+  ค่าพวกนี้เป็น `null` เสมอ ไม่ใช่ปัดเป็น 0
+- ทุกคอนเทนต์ถูกจัดเป็น `video` เสมอ (ไม่พบ field แยกโพสต์รูปแบบ "photo mode")
+- `create_time` สมมติว่าเป็นหน่วยวินาที (ยืนยันจาก docs v1 เท่านั้น ไม่ใช่ v2) โค้ดมี
+  sanity check ถ้า parse ออกมาไกลจากปัจจุบันเกิน 20 ปีจะ throw แทนที่จะเก็บวันที่ผิดเงียบ ๆ
+- access token อายุสั้น (~24 ชม.) ไม่มี refresh flow อัตโนมัติ ต้องขอ token ใหม่เอง
 
 ## โครงสร้าง
 
@@ -157,8 +210,10 @@ lib/
   db.ts                 prisma client (singleton, hot-reload safe)
   env.ts                zod-validated environment
   providers/            InsightProvider interface + implementations   (Stage 2)
-    facebook/           api-spec (endpoint/metric ที่ยืนยันแล้ว), graph client,
-                        normalize + tests                             (Stage 6)
+    meta/               graph client + insights parser ที่ Facebook/Instagram ใช้ร่วมกัน
+    facebook/           api-spec (endpoint/metric ที่ยืนยันแล้ว), normalize + tests (Stage 6)
+    instagram/          api-spec, normalize + tests                   (Stage 6)
+    tiktok/             client, api-spec, normalize + tests            (Stage 6)
   metrics/              การคำนวณทั้งหมด + unit tests                    (Stage 3)
   sync/                 sync engine, upsert, sync_runs logging        (Stage 2)
   queries/              read layer สำหรับ UI                           (Stage 4)

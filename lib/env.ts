@@ -11,6 +11,21 @@ const schema = z.object({
     .enum(["mock", "facebook", "instagram", "tiktok"])
     .default("mock"),
 
+  // ---- Instagram provider (Stage 6) -----------------------------------------
+  // Instagram Business accounts are read through the connected Facebook Page's
+  // token (confirmed: same graph.facebook.com Graph API as FacebookProvider).
+  INSTAGRAM_PAGE_ID: z.string().default(""),
+  INSTAGRAM_ACCESS_TOKEN: z.string().default(""),
+  INSTAGRAM_GRAPH_VERSION: z.string().default(""),
+  INSTAGRAM_LOOKBACK_DAYS: z.coerce.number().int().gt(0).lte(365).default(90),
+
+  // ---- TikTok provider (Stage 6) ---------------------------------------------
+  // TikTok for Developers (open.tiktokapis.com/v2) OAuth access token for the
+  // account's own login, not a TikTok Business/Marketing API credential — see
+  // lib/providers/tiktok/api-spec.ts for why.
+  TIKTOK_ACCESS_TOKEN: z.string().default(""),
+  TIKTOK_LOOKBACK_DAYS: z.coerce.number().int().gt(0).lte(365).default(90),
+
   /** Fixed seed keeps MockProvider deterministic across runs. */
   MOCK_SEED: z.string().default("20260907"),
 

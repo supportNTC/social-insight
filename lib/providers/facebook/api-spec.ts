@@ -14,14 +14,16 @@
  *   - https://developers.facebook.com/docs/graph-api/reference/page/published_posts/
  *   - https://developers.facebook.com/docs/graph-api/reference/page-post/
  *   - https://developers.facebook.com/docs/graph-api/reference/story-attachment/
+ *   - https://developers.facebook.com/docs/graph-api/reference/post/comments/ (re-checked 2026-09-07)
  *
  * Re-check this file whenever Meta publishes a new version; see DEPRECATED
  * below for what the last two rounds already removed.
  */
 
-/** Current version as of 2026-02-18. Overridable via FACEBOOK_GRAPH_VERSION. */
-export const GRAPH_API_VERSION = "v25.0";
-export const GRAPH_API_BASE_URL = "https://graph.facebook.com";
+// GRAPH_API_VERSION / GRAPH_API_BASE_URL moved to ../meta/constants.ts — the
+// same values are confirmed for Instagram too. Re-exported here so existing
+// imports of these two names from this module keep working.
+export { GRAPH_API_VERSION, GRAPH_API_BASE_URL } from "../meta/constants";
 
 /** Reading a page's own published posts. Max `limit` is 100; ~600 ranked posts per year are returned. */
 export const PUBLISHED_POSTS_EDGE = "published_posts";
@@ -45,6 +47,15 @@ export const POST_FIELDS = [
  * raises UnverifiedApiDetailError rather than writing 0 for a missing count.
  */
 export const POST_FIELDS_UNVERIFIED = ["comments.summary(true).limit(0)", "shares"] as const;
+
+/**
+ * The comments edge's `summary` object fields, confirmed on the Post Comments
+ * reference (see the citation above, re-checked 2026-09-07): `order`,
+ * `total_count` (uint32), `can_comment`. `comments.summary.total_count` is
+ * therefore a real, documented path — no longer a guess — which is why
+ * normalize.ts's readCommentCount() only raises on a genuinely unexpected
+ * response shape now, not on principle.
+ */
 
 /**
  * Post-level insights. `post_impressions` / `post_impressions_unique` — the
@@ -122,14 +133,9 @@ export const DEPRECATED_METRICS: Readonly<Record<string, { removedOn: string; re
  * can never reach the database. Each entry is a question for the user.
  */
 export const UNVERIFIED = {
-  commentCount: {
-    question:
-      "Exact field expansion that returns a post's comment total in one call (the `summary` parameter is documented; its exact expression is not).",
-    docUrl: "https://developers.facebook.com/docs/graph-api/reference/page-post/",
-  },
   shareCount: {
     question:
-      "Shape of the PagePost `shares` field — is the total at `shares.count`, and is the field omitted entirely when a post has no shares?",
+      "The PagePost `shares` field is confirmed as a struct with key `count` (Page Post reference). Whether it is omitted entirely for zero shares was NOT confirmable from any first-party doc as of 2026-09-07 — resolved as a team decision instead (see readShareCount in normalize.ts: a missing `shares` field is treated as 0). This entry stays open only for the case `shares` is present but malformed (no numeric `count`), which is a genuine shape surprise worth re-checking this doc page for.",
     docUrl: "https://developers.facebook.com/docs/graph-api/reference/page-post/",
   },
   attachmentType: {

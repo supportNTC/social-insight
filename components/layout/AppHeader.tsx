@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartLineUp, Gear, Table } from "@phosphor-icons/react";
+import { ChartLineUp, Gear, Table, Target } from "@phosphor-icons/react";
 import { formatDateTimeBangkok } from "@/lib/format";
 
 const NAV_ITEMS = [
   { href: "/", label: "Overview", icon: ChartLineUp },
   { href: "/content", label: "คอนเทนต์", icon: Table },
+  { href: "/goals", label: "เป้าหมาย", icon: Target },
   { href: "/settings", label: "ตั้งค่า", icon: Gear },
 ];
 
@@ -16,9 +17,9 @@ export function AppHeader({ lastSyncFinishedAt }: { lastSyncFinishedAt: Date | n
 
   return (
     <header className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-card)]/95 backdrop-blur">
-      <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-[var(--space-2xl)] py-[var(--space-lg)]">
-        <div className="flex items-center gap-[var(--space-2xl)]">
-          <span className="text-[15px] font-semibold whitespace-nowrap text-[var(--ink)]">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-2 px-[var(--space-lg)] py-[var(--space-lg)] sm:gap-4 sm:px-[var(--space-2xl)]">
+        <div className="flex min-w-0 items-center gap-[var(--space-lg)] sm:gap-[var(--space-2xl)]">
+          <span className="shrink-0 text-[15px] font-semibold whitespace-nowrap text-[var(--ink)]">
             Social Insight
           </span>
           <nav className="flex items-center gap-1">
@@ -29,21 +30,22 @@ export function AppHeader({ lastSyncFinishedAt }: { lastSyncFinishedAt: Date | n
                   key={href}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:outline-none ${
+                  aria-label={label}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:outline-none sm:px-3 ${
                     active
                       ? "bg-[var(--color-muted)] text-[var(--ink)]"
                       : "text-[var(--ink-2)] hover:bg-[var(--color-muted)] hover:text-[var(--ink)]"
                   }`}
                 >
                   <Icon size={16} weight={active ? "fill" : "regular"} aria-hidden="true" />
-                  {label}
+                  <span className="hidden sm:inline">{label}</span>
                 </Link>
               );
             })}
           </nav>
         </div>
 
-        <p className="text-[12px] text-[var(--ink-3)]" title="เวลา sync ล่าสุดที่สำเร็จ">
+        <p className="hidden shrink-0 text-[12px] text-[var(--ink-3)] sm:block" title="เวลา sync ล่าสุดที่สำเร็จ">
           {lastSyncFinishedAt
             ? `sync ล่าสุด: ${formatDateTimeBangkok(lastSyncFinishedAt)}`
             : "ยังไม่เคย sync — รัน pnpm sync"}

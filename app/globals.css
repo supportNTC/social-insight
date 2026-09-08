@@ -61,42 +61,50 @@
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
 }
 
-.dark {
-  --background: #0b1220;
-  --foreground: #e8ebf0;
-  --card: #111a2e;
-  --card-foreground: #e8ebf0;
-  --popover: #111a2e;
-  --popover-foreground: #e8ebf0;
-  --primary: #3987e5;
-  --primary-foreground: #0b1220;
-  --secondary: #60a5fa;
-  --secondary-foreground: #0b1220;
-  --muted: #182541;
-  --muted-foreground: #9aa3b2;
-  --accent: #fab219;
-  --accent-foreground: #0b1220;
-  --destructive: #e66767;
-  --destructive-foreground: #0b1220;
-  --border: #1f2b46;
-  --input: #1f2b46;
-  --ring: #3987e5;
+/*
+ * This app has no theme toggle — dark mode is automatic, following the
+ * visitor's OS/browser preference. A plain `.dark` class selector here would
+ * be dead code (nothing in the app ever applies that class), so this is a
+ * media query instead.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1220;
+    --foreground: #e8ebf0;
+    --card: #111a2e;
+    --card-foreground: #e8ebf0;
+    --popover: #111a2e;
+    --popover-foreground: #e8ebf0;
+    --primary: #3987e5;
+    --primary-foreground: #0b1220;
+    --secondary: #60a5fa;
+    --secondary-foreground: #0b1220;
+    --muted: #182541;
+    --muted-foreground: #9aa3b2;
+    --accent: #fab219;
+    --accent-foreground: #0b1220;
+    --destructive: #e66767;
+    --destructive-foreground: #0b1220;
+    --border: #1f2b46;
+    --input: #1f2b46;
+    --ring: #3987e5;
 
-  --accent-ink: #3987e5;
-  --good: #199e70;
-  --good-ink: #0ca30c;
-  --warning: #fab219;
-  --warning-ink: #fab219;
-  --critical: #e66767;
-  --critical-ink: #e66767;
-  --ink: #e8ebf0;
-  --ink-2: #9aa3b2;
-  --ink-3: #7f8695;
+    --accent-ink: #3987e5;
+    --good: #199e70;
+    --good-ink: #0ca30c;
+    --warning: #fab219;
+    --warning-ink: #fab219;
+    --critical: #e66767;
+    --critical-ink: #e66767;
+    --ink: #e8ebf0;
+    --ink-2: #9aa3b2;
+    --ink-3: #7f8695;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+  }
 }
 
 @theme inline {

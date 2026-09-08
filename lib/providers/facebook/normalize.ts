@@ -1,6 +1,8 @@
 import type { ContentKind } from "@prisma/client";
 import { snapshotDateFor, type SnapshotDate } from "@/lib/datetime";
 import type { ProviderAccountMetric, ProviderContent, ProviderContentMetric } from "../types";
+import { asArray, asFiniteNumber, asRecord, asString } from "../meta/json-safe";
+import { latestNumber, parseInsights, type InsightEntry } from "../meta/insights";
 import {
   ATTACHMENT_TYPE_TO_KIND,
   PAGE_METRICS,
@@ -24,26 +26,6 @@ import {
  * read defensively — every access is guarded, so a shape change surfaces as a
  * skipped row or a raised error, never as a silent zero.
  */
-
-// ---- unknown-safe readers ---------------------------------------------------
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function asFiniteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function asArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
 
 // ---- posts ------------------------------------------------------------------
 
@@ -99,42 +81,11 @@ export function normalizePost(raw: unknown): ProviderContent | null {
 
 // ---- insights ---------------------------------------------------------------
 
-type InsightEntry = { name: string; values: { value: unknown; endTime: string | null }[] };
-
-/** Flattens the insights envelope into name -> values, ignoring anything malformed. */
-export function parseInsights(raw: unknown): Map<string, InsightEntry> {
-  const envelope = asRecord(raw);
-  const out = new Map<string, InsightEntry>();
-  if (!envelope) return out;
-
-  for (const item of asArray(envelope.data)) {
-    const entry = asRecord(item);
-    if (!entry) continue;
-    const name = asString(entry.name);
-    if (!name) continue;
-
-    const values = asArray(entry.values)
-      .map((v) => asRecord(v))
-      .filter((v): v is Record<string, unknown> => v !== null)
-      .map((v) => ({ value: v.value, endTime: asString(v.end_time) }));
-
-    out.set(name, { name, values });
-  }
-
-  return out;
-}
-
-/** The latest numeric value of a metric, or null when it is absent / non-numeric. */
-export function latestNumber(insights: Map<string, InsightEntry>, metric: string): number | null {
-  const entry = insights.get(metric);
-  if (!entry) return null;
-
-  for (let i = entry.values.length - 1; i >= 0; i -= 1) {
-    const value = asFiniteNumber(entry.values[i]?.value);
-    if (value !== null) return value;
-  }
-  return null;
-}
+// Moved to lib/providers/meta/insights.ts — Instagram's insights envelope is
+// byte-for-byte the same shape, so both providers share one parser instead of
+// each maintaining their own. Re-exported here so existing imports of these
+// names from this module keep working.
+export { parseInsights, latestNumber, type InsightEntry };
 
 /**
  * post_reactions_by_type_total is an object keyed by reaction name
@@ -169,21 +120,43 @@ export function sumReactions(insights: Map<string, InsightEntry>): number | null
   return null;
 }
 
-/** Comment total, from the `summary` expansion. Raises rather than assuming 0. */
+/**
+ * Comment total, from `comments.summary.total_count` — confirmed on the Post
+ * Comments reference (order / total_count / can_comment are the documented
+ * summary fields; see the citation in this file's header). Still raises
+ * rather than assuming 0 if a real response omits it, but that is now a
+ * "the API behaved unexpectedly" error, not an open question — most likely a
+ * missing `pages_read_user_content` permission on the token.
+ */
 export function readCommentCount(post: Record<string, unknown>): number {
   const comments = asRecord(post.comments);
   const summary = comments ? asRecord(comments.summary) : null;
   const total = summary ? asFiniteNumber(summary.total_count) : null;
-  if (total === null) throw new UnverifiedApiDetailError("commentCount");
+  if (total === null) {
+    throw new Error(
+      "Facebook API: expected comments.summary.total_count on a post but it was missing — " +
+        "this field is documented and normally always present once requested, so check the " +
+        "token's permissions (pages_read_user_content) rather than api-spec.ts.",
+    );
+  }
   return total;
 }
 
 /**
- * Share total. Meta is documented to omit `shares` entirely on some posts, but
- * whether that means "zero shares" or "not reported" is exactly what is
- * unconfirmed — and those two would be different rows in our database.
+ * Share total. `shares` is confirmed as `{count: N}` when present (Page Post
+ * reference), but whether Meta omits it entirely for zero shares, and whether
+ * that means "zero" or "not reported", is not confirmed by any doc found
+ * 2026-09-07 (see UNVERIFIED.shareCount). Team decision on that date: treat a
+ * missing `shares` field as 0 — shares is NOT NULL in our schema (unlike
+ * reach/saves), and 0 is overwhelmingly the more likely real value for a post
+ * nobody shared, so this is the assumption, not a doc-confirmed fact.
+ *
+ * Still throws if `shares` is present but malformed (e.g. `count` missing or
+ * non-numeric) — that is a genuine shape surprise, not the documented omission.
  */
 export function readShareCount(post: Record<string, unknown>): number {
+  if (post.shares === undefined || post.shares === null) return 0;
+
   const shares = asRecord(post.shares);
   const count = shares ? asFiniteNumber(shares.count) : null;
   if (count === null) throw new UnverifiedApiDetailError("shareCount");

@@ -256,3 +256,67 @@ model SyncRun {
   @@index([status, startedAt])
   @@map("sync_runs")
 }
+
+/// Which number a Goal targets. `course_conversions` has no automated source
+/// yet — see CourseConversionEntry — everything else reuses the same
+/// aggregation the Overview page already computes.
+enum GoalMetric {
+  weighted_engagement
+  followers
+  course_conversions
+}
+
+/// A marketing target for one calendar month, optionally scoped to one
+/// platform (null = all platforms combined). Progress is computed at query
+/// time from existing data (or from CourseConversionEntry) — nothing here
+/// stores a computed "actual" value, same rule as engagement rate etc.
+model Goal {
+  id     String     @id @default(cuid())
+  metric GoalMetric
+  /// Null = all platforms combined.
+  platform Platform?
+  /// The first day of the target month, Asia/Bangkok, stored as a bare date
+  /// (same convention as snapshot_date) — this is a month label, not an instant.
+  month DateTime @db.Date
+
+  targetValue Float @map("target_value")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// Free text until the company SSO decision is made — same as metric_weights.updated_by.
+  updatedBy String @default("system") @map("updated_by")
+
+  /// One goal per metric+platform+month — editing re-sets targetValue on the
+  /// same row. NOTE: Postgres treats NULL as never equal to NULL in a unique
+  /// index, so this does NOT stop two "all platforms" (platform=NULL) goals
+  /// for the same metric+month from both existing at the DB level — dedup
+  /// for that case is enforced in lib/queries/goals.ts's upsertGoal instead.
+  @@unique([metric, platform, month])
+  @@index([month])
+  @@map("goals")
+}
+
+/// Manual log of course sign-ups attributed to social media. There is no
+/// automated attribution system (no UTM/coupon tracking) — the marketing team
+/// types in a count per period by hand, per a 2026-09-08 product decision.
+/// This is deliberately a log of entries, not a single running total, so a
+/// correction is a new entry (or edit of one) rather than an unauditable
+/// overwrite.
+model CourseConversionEntry {
+  id String @id @default(cuid())
+
+  /// The calendar day this entry represents, Asia/Bangkok — same `date`
+  /// (no time component) convention as snapshot_date elsewhere.
+  entryDate DateTime @map("entry_date") @db.Date
+  /// Null = not attributed to a specific platform.
+  platform Platform?
+  count    Int
+  note     String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Free text until the company SSO decision is made.
+  createdBy String @default("system") @map("created_by")
+
+  @@index([entryDate])
+  @@map("course_conversion_entries")
+}

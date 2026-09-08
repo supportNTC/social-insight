@@ -95,7 +95,7 @@ export async function getOverviewData(filters: OverviewFilters): Promise<Overvie
 
 // ---- data loading ----------------------------------------------------------
 
-type ContentDeltaRow = {
+export type ContentDeltaRow = {
   platform: Platform;
   snapshotDate: SnapshotDate;
   viewsDelta: number;
@@ -103,7 +103,7 @@ type ContentDeltaRow = {
   weightedEngagementDelta: number;
 };
 
-async function loadContentDeltas(
+export async function loadContentDeltas(
   accountIds: string[],
   range: ResolvedRange,
   weights: MetricWeights,
@@ -179,12 +179,12 @@ async function loadContentDeltas(
   return out;
 }
 
-type AccountSeriesPoint = {
+export type AccountSeriesPoint = {
   snapshotDate: SnapshotDate;
   followers: number;
 };
 
-async function loadAccountSeries(
+export async function loadAccountSeries(
   accountIds: string[],
   range: ResolvedRange,
 ): Promise<Map<string, AccountSeriesPoint[]>> {
@@ -220,7 +220,7 @@ function emptyKpis(): OverviewKpis {
   };
 }
 
-function sumInPeriod(
+export function sumInPeriod(
   rows: ContentDeltaRow[],
   from: SnapshotDate,
   to: SnapshotDate,
@@ -264,7 +264,7 @@ function findClosestOnOrBefore(
   return best;
 }
 
-function followerTotals(
+export function followerTotals(
   accountIds: string[],
   accountSeries: Map<string, AccountSeriesPoint[]>,
   range: ResolvedRange,

@@ -57,3 +57,16 @@ export function formatDateTimeBangkok(date: Date): string {
 export function formatDateBangkok(date: Date): string {
   return dateFormatter.format(date);
 }
+
+const monthLabelFormatter = new Intl.DateTimeFormat("th-TH-u-ca-gregory", {
+  timeZone: BANGKOK_TZ,
+  month: "long",
+  year: "numeric",
+});
+
+/** `monthKey` is "YYYY-MM" — formats as e.g. "กันยายน 2026". */
+export function formatMonthLabel(monthKey: string): string {
+  // Midday, not midnight, so no timezone in the round-trip can push this to
+  // the neighbouring calendar day and print the wrong month.
+  return monthLabelFormatter.format(new Date(`${monthKey}-01T12:00:00Z`));
+}

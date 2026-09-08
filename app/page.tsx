@@ -1,4 +1,5 @@
-import { Binoculars, Eye, Heart, Percent, UsersThree } from "@phosphor-icons/react/dist/ssr";
+import Link from "next/link";
+import { ArrowRight, Binoculars, Eye, Heart, Percent, UsersThree } from "@phosphor-icons/react/dist/ssr";
 import { KpiCard } from "@/components/overview/KpiCard";
 import { TrendSection } from "@/components/overview/TrendSection";
 import { PlatformSplit } from "@/components/overview/PlatformSplit";
@@ -7,11 +8,15 @@ import { RisingList } from "@/components/overview/RisingList";
 import { TopPerformers } from "@/components/overview/TopPerformers";
 import { UnderperformingList } from "@/components/overview/UnderperformingList";
 import { ScrollReveal } from "@/components/overview/ScrollReveal";
+import { GoalList } from "@/components/goals/GoalList";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { getOverviewData } from "@/lib/queries/overview";
 import { getRecommendations } from "@/lib/queries/recommendations";
 import { parseDateRangeKey } from "@/lib/queries/date-range";
 import { parsePlatformList } from "@/lib/platform";
+import { getLatestDataDate } from "@/lib/queries/latest-data-date";
+import { currentMonthKey, getGoalsForMonth } from "@/lib/queries/goals";
+import { snapshotDateFor } from "@/lib/datetime";
 import { formatCompactNumber, formatPercentValue, formatSignedCompactNumber, formatSignedPercent } from "@/lib/format";
 
 export default async function OverviewPage({
@@ -23,9 +28,13 @@ export default async function OverviewPage({
   const range = parseDateRangeKey(params.range);
   const platforms = parsePlatformList(params.platforms);
 
-  const [data, recommendations] = await Promise.all([
+  const anchor = await getLatestDataDate();
+  const currentMonth = currentMonthKey(anchor ?? snapshotDateFor(new Date()));
+
+  const [data, recommendations, goals] = await Promise.all([
     getOverviewData({ range, platforms }),
     getRecommendations({ range, platforms }),
+    getGoalsForMonth(currentMonth),
   ]);
 
   return (
@@ -39,6 +48,31 @@ export default async function OverviewPage({
 
       <div className="mb-[var(--space-xl)]">
         <FilterBar range={range} platforms={platforms} />
+      </div>
+
+      <div className="mb-[var(--space-2xl)]">
+        <ScrollReveal>
+          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-[var(--space-2xl)] shadow-[var(--shadow-md)]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--ink)]">เป้าหมายเดือนนี้</h2>
+                <p className="mt-0.5 text-[13px] text-[var(--ink-2)]">
+                  เทียบทั้งเดือนเสมอ — ไม่ผูกกับตัวกรองช่วงเวลาด้านบน
+                </p>
+              </div>
+              <Link
+                href="/goals"
+                className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[var(--accent-ink)] hover:underline"
+              >
+                จัดการเป้าหมาย
+                <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="mt-[var(--space-lg)]">
+              <GoalList goals={goals} />
+            </div>
+          </section>
+        </ScrollReveal>
       </div>
 
       {!data ? (

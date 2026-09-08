@@ -1,5 +1,7 @@
 import { getEnv } from "@/lib/env";
 import { FacebookProvider } from "./facebook-provider";
+import { InstagramProvider } from "./instagram-provider";
+import { TikTokProvider } from "./tiktok-provider";
 import { MockProvider } from "./mock-provider";
 import type { InsightProvider } from "./types";
 
@@ -40,11 +42,39 @@ export function getProvider(): InsightProvider {
       });
     }
 
-    default:
-      throw new Error(
-        `INSIGHT_PROVIDER="${env.INSIGHT_PROVIDER}" is not implemented yet (Stage 6 does Facebook first, ` +
-          `then Instagram and TikTok once their metric names are verified against current docs). ` +
-          `Set INSIGHT_PROVIDER=mock until then.`,
-      );
+    case "instagram": {
+      const missing = [
+        env.INSTAGRAM_PAGE_ID ? null : "INSTAGRAM_PAGE_ID",
+        env.INSTAGRAM_ACCESS_TOKEN ? null : "INSTAGRAM_ACCESS_TOKEN",
+      ].filter((name): name is string => name !== null);
+
+      if (missing.length > 0) {
+        throw new Error(
+          `INSIGHT_PROVIDER=instagram needs ${missing.join(" and ")} in the environment. ` +
+            `Set INSIGHT_PROVIDER=mock to keep running on generated data.`,
+        );
+      }
+
+      return new InstagramProvider({
+        pageId: env.INSTAGRAM_PAGE_ID,
+        accessToken: env.INSTAGRAM_ACCESS_TOKEN,
+        lookbackDays: env.INSTAGRAM_LOOKBACK_DAYS,
+        graphVersion: env.INSTAGRAM_GRAPH_VERSION || undefined,
+      });
+    }
+
+    case "tiktok": {
+      if (!env.TIKTOK_ACCESS_TOKEN) {
+        throw new Error(
+          "INSIGHT_PROVIDER=tiktok needs TIKTOK_ACCESS_TOKEN in the environment. " +
+            "Set INSIGHT_PROVIDER=mock to keep running on generated data.",
+        );
+      }
+
+      return new TikTokProvider({
+        accessToken: env.TIKTOK_ACCESS_TOKEN,
+        lookbackDays: env.TIKTOK_LOOKBACK_DAYS,
+      });
+    }
   }
 }

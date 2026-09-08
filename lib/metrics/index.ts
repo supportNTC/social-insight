@@ -7,3 +7,4 @@ export * from "./performance-score";
 export * from "./velocity";
 export * from "./rising";
 export * from "./underperformance";
+export * from "./goal-progress";

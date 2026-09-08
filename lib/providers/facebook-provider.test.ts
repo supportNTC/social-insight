@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FacebookProvider } from "./facebook-provider";
-import type { GraphFetch, GraphHttpResponse } from "./facebook/graph-client";
+import type { GraphFetch, GraphHttpResponse } from "./meta/graph-client";
 import { DEPRECATED_METRICS } from "./facebook/api-spec";
 
 /**
